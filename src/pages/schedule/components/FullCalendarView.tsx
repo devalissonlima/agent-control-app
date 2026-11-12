@@ -5,7 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { EventContentArg, EventClickArg } from '@fullcalendar/core'
 import ptBrLocale from '@fullcalendar/core/locales/pt-br'
-import { Lock, Clock, MessageCircle } from 'lucide-react'
+import { Lock, Clock, MessageCircle, UserCheck } from 'lucide-react'
 import type { Appointment } from '@/types/schedule'
 import { formatCurrency } from '@/utils/formatters'
 import './fullcalendar.css'
@@ -15,6 +15,7 @@ interface FullCalendarViewProps {
   appointments: Appointment[]
   onSelectAppointment: (appointment: Appointment) => void
   onDatesSet?: (arg: { view: { title: string; type: string } }) => void
+  onSlotClick?: (date: string, startTime: string) => void
 }
 
 export const FullCalendarView: React.FC<FullCalendarViewProps> = ({
@@ -22,6 +23,7 @@ export const FullCalendarView: React.FC<FullCalendarViewProps> = ({
   appointments,
   onSelectAppointment,
   onDatesSet,
+  onSlotClick,
 }) => {
   // Converte a lista de Appointment para o formato do FullCalendar
   const events = useMemo(() => {
@@ -44,6 +46,17 @@ export const FullCalendarView: React.FC<FullCalendarViewProps> = ({
     }
   }
 
+  const handleDateClick = (info: { dateStr: string }) => {
+    const date = info.dateStr.slice(0, 10)
+    let startTime = '09:00'
+    if (info.dateStr.includes('T')) {
+      startTime = info.dateStr.slice(11, 16)
+    }
+    if (onSlotClick) {
+      onSlotClick(date, startTime)
+    }
+  }
+
   // Renderização customizada dos cards de eventos do FullCalendar
   const renderEventContent = (eventInfo: EventContentArg) => {
     const apt = eventInfo.event.extendedProps.appointment as Appointment
@@ -51,14 +64,19 @@ export const FullCalendarView: React.FC<FullCalendarViewProps> = ({
 
     const isBlocked = apt.status === 'blocked'
     const isMonthView = eventInfo.view.type === 'dayGridMonth'
+    const isManual = apt.origin === 'manual' || apt.channel === 'manual'
 
     // Estilos visuais por status
     const getStatusStyles = () => {
       switch (apt.status) {
         case 'confirmed':
           return {
-            month: 'bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200',
-            time: 'bg-blue-50/95 text-blue-950 border-blue-200 hover:bg-blue-100/90 hover:border-blue-300',
+            month: isManual
+              ? 'bg-slate-100 text-slate-900 border-slate-300 hover:bg-slate-200'
+              : 'bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200',
+            time: isManual
+              ? 'bg-slate-50/95 text-slate-900 border-slate-300 hover:bg-slate-100/90 hover:border-slate-400'
+              : 'bg-blue-50/95 text-blue-950 border-blue-200 hover:bg-blue-100/90 hover:border-blue-300',
           }
         case 'pending':
           return {
@@ -140,9 +158,15 @@ export const FullCalendarView: React.FC<FullCalendarViewProps> = ({
         {!isBlocked && (
           <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-200/60 opacity-80">
             <span className="truncate">{apt.professional || 'Profissional IA'}</span>
-            <span className="flex items-center gap-0.5 font-semibold text-emerald-700 shrink-0">
-              <MessageCircle className="h-2.5 w-2.5" /> WhatsApp
-            </span>
+            {isManual ? (
+              <span className="flex items-center gap-0.5 font-semibold text-slate-700 shrink-0">
+                <UserCheck className="h-2.5 w-2.5" /> Manual
+              </span>
+            ) : (
+              <span className="flex items-center gap-0.5 font-semibold text-emerald-700 shrink-0">
+                <MessageCircle className="h-2.5 w-2.5" /> WhatsApp
+              </span>
+            )}
           </div>
         )}
 
@@ -175,6 +199,7 @@ export const FullCalendarView: React.FC<FullCalendarViewProps> = ({
         dayMaxEvents={3}
         moreLinkClick="popover"
         eventClick={handleEventClick}
+        dateClick={handleDateClick}
         eventContent={renderEventContent}
         datesSet={onDatesSet}
       />

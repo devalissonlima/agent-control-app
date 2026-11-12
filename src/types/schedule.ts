@@ -1,8 +1,10 @@
 export type AppointmentStatus =
-  | 'confirmed' // Confirmado pelo Bot
+  | 'confirmed' // Confirmado pelo Bot / Confirmado
   | 'pending' // Pendente
   | 'cancelled' // Cancelado
   | 'blocked' // Bloqueado (Folga, Almoço, Consulta, etc.)
+
+export type AppointmentOrigin = 'ai' | 'manual'
 
 export interface Appointment {
   id: string
@@ -13,10 +15,13 @@ export interface Appointment {
   customerPhone: string
   serviceName: string
   professional?: string
+  employeeOrResource?: string
   price: number
   status: AppointmentStatus
   notes?: string
   channel: 'whatsapp' | 'manual'
+  origin?: AppointmentOrigin
+  durationMinutes?: number
   blockReason?: string
 }
 
@@ -27,4 +32,20 @@ export interface BlockTimeFormData {
   startTime: string
   endTime: string
   reason: string
+}
+
+export interface AppointmentFormData {
+  id?: string
+  customerName: string
+  customerPhone: string
+  serviceName: string
+  price: number
+  date: string
+  startTime: string
+  endTime: string
+  durationMinutes: number
+  professional?: string
+  notes?: string
+  status?: AppointmentStatus
+  origin?: AppointmentOrigin
 }
