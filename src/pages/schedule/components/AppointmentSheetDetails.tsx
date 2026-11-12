@@ -11,6 +11,8 @@ import {
   Edit3,
   XCircle,
   CheckCircle2,
+  Sparkles,
+  UserCheck,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -31,6 +33,7 @@ interface AppointmentSheetDetailsProps {
   onClose: (open: boolean) => void
   appointment: Appointment | null
   onCancelAppointment: (id: string) => void
+  onEditAppointment?: (appointment: Appointment) => void
 }
 
 export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = ({
@@ -38,15 +41,18 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
   onClose,
   appointment,
   onCancelAppointment,
+  onEditAppointment,
 }) => {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [tempNotes, setTempNotes] = useState('')
   const [savedNotes, setSavedNotes] = useState<string | null>(null)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   if (!appointment) return null
 
   const isBlocked = appointment.status === 'blocked'
   const isCancelled = appointment.status === 'cancelled'
+  const isManual = appointment.origin === 'manual' || appointment.channel === 'manual'
   const currentNotes = savedNotes ?? appointment.notes ?? ''
 
   const formattedDate = (() => {
@@ -71,7 +77,7 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
             variant="outline"
             className="border-emerald-300 bg-emerald-50 text-emerald-700 font-semibold"
           >
-            Confirmado pelo Bot
+            {isManual ? 'Confirmado (Manual)' : 'Confirmado pelo Bot'}
           </Badge>
         )
       case 'pending':
@@ -104,6 +110,17 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
     }
   }
 
+  const handleEditClick = () => {
+    if (onEditAppointment) {
+      onEditAppointment(appointment)
+    }
+  }
+
+  const handleConfirmCancel = () => {
+    onCancelAppointment(appointment.id)
+    setShowCancelConfirm(false)
+  }
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
@@ -119,7 +136,32 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
                   {isBlocked ? 'Período Bloqueado' : 'Detalhes do Horário'}
                 </SheetTitle>
               </div>
-              <div>{getStatusBadge()}</div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                {getStatusBadge()}
+                {!isBlocked && (
+                  <Badge
+                    variant="outline"
+                    className={
+                      isManual
+                        ? 'border-slate-300 bg-slate-100 text-slate-700 font-semibold flex items-center gap-1'
+                        : 'border-indigo-200 bg-indigo-50 text-indigo-700 font-semibold flex items-center gap-1'
+                    }
+                  >
+                    {isManual ? (
+                      <>
+                        <UserCheck className="h-3 w-3" />
+                        <span>Agendado Manualmente</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3 w-3" />
+                        <span>Agendado via IA (WhatsApp)</span>
+                      </>
+                    )}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <SheetClose className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition" />
@@ -149,8 +191,16 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Dados do Cliente
                 </span>
-                <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Capturado via IA
+                <span className="text-[11px] font-medium flex items-center gap-1">
+                  {isManual ? (
+                    <span className="text-slate-600 flex items-center gap-1">
+                      <UserCheck className="h-3 w-3" /> Balcão / Manual
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Capturado via IA
+                    </span>
+                  )}
                 </span>
               </div>
 
@@ -169,15 +219,17 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
                   </div>
                 </div>
 
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  <span>WhatsApp</span>
-                </a>
+                {appointment.customerPhone && appointment.customerPhone !== '-' && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
               </div>
             </div>
           ) : (
@@ -197,9 +249,21 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
           {/* 2. Serviço Agendado e Valor Estimado */}
           {!isBlocked && (
             <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Serviço e Profissional
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Serviço e Profissional
+                </span>
+                {onEditAppointment && (
+                  <button
+                    type="button"
+                    onClick={handleEditClick}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                    <span>Editar</span>
+                  </button>
+                )}
+              </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -226,29 +290,29 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
             </div>
           )}
 
-          {/* 3. Observações / Informações da IA */}
+          {/* 3. Observações / Informações */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2 shadow-2xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5 text-slate-400" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Observações & Detalhes da IA
+                  Observações Internas
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  setIsEditing(!isEditing)
+                  setIsEditingNotes(!isEditingNotes)
                   setTempNotes(currentNotes)
                 }}
                 className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
               >
                 <Edit3 className="h-3 w-3" />
-                {isEditing ? 'Fechar' : 'Editar'}
+                {isEditingNotes ? 'Fechar' : 'Editar'}
               </button>
             </div>
 
-            {isEditing ? (
+            {isEditingNotes ? (
               <div className="space-y-2 pt-1">
                 <textarea
                   rows={3}
@@ -261,7 +325,7 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
                   size="sm"
                   onClick={() => {
                     setSavedNotes(tempNotes)
-                    setIsEditing(false)
+                    setIsEditingNotes(false)
                   }}
                   className="w-full h-8 text-xs rounded-xl"
                 >
@@ -271,7 +335,7 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
             ) : (
               <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
                 {currentNotes ||
-                  'Nenhuma observação especial informada pelo cliente durante a conversa.'}
+                  'Nenhuma observação especial informada pelo cliente ou equipe.'}
               </p>
             )}
           </div>
@@ -283,30 +347,71 @@ export const AppointmentSheetDetails: React.FC<AppointmentSheetDetailsProps> = (
         </div>
 
         {/* Rodapé de Ações */}
-        <div className="border-t border-slate-200/80 bg-slate-50/80 p-4 sm:p-5 shrink-0 flex items-center justify-between gap-3">
-          {!isCancelled ? (
-            <button
-              type="button"
-              onClick={() => onCancelAppointment(appointment.id)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition border border-rose-200"
-            >
-              <XCircle className="h-4 w-4" />
-              <span>Cancelar Horário</span>
-            </button>
+        <div className="border-t border-slate-200/80 bg-slate-50/80 p-4 sm:p-5 shrink-0 flex flex-col gap-2">
+          {showCancelConfirm ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 space-y-2">
+              <p className="text-xs font-semibold text-rose-800">
+                Deseja realmente cancelar este horário?
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleConfirmCancel}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs h-7 rounded-lg"
+                >
+                  Sim, Cancelar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="text-xs h-7 rounded-lg"
+                >
+                  Voltar
+                </Button>
+              </div>
+            </div>
           ) : (
-            <span className="text-xs text-rose-600 font-semibold">
-              Horário Cancelado
-            </span>
-          )}
+            <div className="flex items-center justify-between gap-2">
+              {!isCancelled ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition border border-rose-200"
+                >
+                  <XCircle className="h-4 w-4" />
+                  <span>Cancelar Horário</span>
+                </button>
+              ) : (
+                <span className="text-xs text-rose-600 font-semibold">
+                  Horário Cancelado
+                </span>
+              )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onClose(false)}
-            className="rounded-xl ml-auto"
-          >
-            Fechar
-          </Button>
+              <div className="flex items-center gap-2 ml-auto">
+                {!isBlocked && onEditAppointment && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditClick}
+                    className="rounded-xl text-xs h-9 flex items-center gap-1.5"
+                  >
+                    <Edit3 className="h-3.5 w-3.5 text-indigo-600" />
+                    <span>Editar</span>
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onClose(false)}
+                  className="rounded-xl text-xs h-9"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

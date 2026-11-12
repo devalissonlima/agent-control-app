@@ -6,6 +6,7 @@ import {
   Activity,
   ShoppingBag,
   CalendarDays,
+  ReceiptText,
   Users,
   CreditCard,
   User,
@@ -27,6 +28,7 @@ export const NAVIGATION_ITEMS: readonly NavigationMenuItem[] = [
   { label: 'Acompanhamento', path: '/acompanhamento', icon: Activity },
   { label: 'Pedidos', path: '/pedidos', icon: ShoppingBag },
   { label: 'Agenda', path: '/agenda', icon: CalendarDays },
+  { label: 'Orçamentos', path: '/orcamentos', icon: ReceiptText },
   { label: 'Clientes', path: '/clientes', icon: Users },
   { label: 'Meu Plano', path: '/meu-plano', icon: CreditCard },
 ]

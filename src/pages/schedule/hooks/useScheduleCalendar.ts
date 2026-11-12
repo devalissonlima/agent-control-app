@@ -4,6 +4,7 @@ import type {
   Appointment,
   ScheduleViewMode,
   BlockTimeFormData,
+  AppointmentFormData,
 } from '@/types/schedule'
 import { INITIAL_APPOINTMENTS } from '@/services/mockData'
 
@@ -16,6 +17,11 @@ export function useScheduleCalendar() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false)
+
+  // Estados do Modal de Criação / Edição de Agendamento
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
+  const [slotPrefill, setSlotPrefill] = useState<{ date: string; startTime: string } | null>(null)
 
   // Sincronização com a API do FullCalendar
   const handleViewModeChange = (mode: ScheduleViewMode) => {
@@ -74,6 +80,26 @@ export function useScheduleCalendar() {
     setIsSheetOpen(false)
   }
 
+  // Abertura do formulário de agendamento (Criação Manual ou Edição)
+  const openCreateForm = (prefill?: { date: string; startTime: string }) => {
+    setEditingAppointment(null)
+    setSlotPrefill(prefill || null)
+    setIsFormOpen(true)
+  }
+
+  const openEditForm = (appointment: Appointment) => {
+    setEditingAppointment(appointment)
+    setSlotPrefill(null)
+    setIsSheetOpen(false) // Fecha o sheet de detalhes para abrir o dialog de edição
+    setIsFormOpen(true)
+  }
+
+  const closeForm = () => {
+    setIsFormOpen(false)
+    setEditingAppointment(null)
+    setSlotPrefill(null)
+  }
+
   // Ações no Agendamento
   const cancelAppointment = (id: string) => {
     setAppointments((prev) =>
@@ -81,6 +107,56 @@ export function useScheduleCalendar() {
     )
     if (selectedAppointment?.id === id) {
       setSelectedAppointment((prev) => (prev ? { ...prev, status: 'cancelled' } : null))
+    }
+  }
+
+  const saveAppointment = (data: AppointmentFormData) => {
+    if (data.id) {
+      // Atualizar existente
+      setAppointments((prev) =>
+        prev.map((apt) => {
+          if (apt.id === data.id) {
+            const updated: Appointment = {
+              ...apt,
+              customerName: data.customerName,
+              customerPhone: data.customerPhone,
+              serviceName: data.serviceName,
+              price: data.price,
+              date: data.date,
+              startTime: data.startTime,
+              endTime: data.endTime,
+              durationMinutes: data.durationMinutes,
+              professional: data.professional,
+              notes: data.notes,
+              status: data.status || apt.status,
+            }
+            if (selectedAppointment?.id === data.id) {
+              setSelectedAppointment(updated)
+            }
+            return updated
+          }
+          return apt
+        })
+      )
+    } else {
+      // Criar novo manual
+      const newAppointment: Appointment = {
+        id: `apt-${Date.now()}`,
+        date: data.date,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        durationMinutes: data.durationMinutes,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        serviceName: data.serviceName,
+        price: data.price,
+        status: 'confirmed',
+        channel: 'manual',
+        origin: 'manual',
+        professional: data.professional,
+        notes: data.notes,
+      }
+      setAppointments((prev) => [newAppointment, ...prev])
     }
   }
 
@@ -97,6 +173,7 @@ export function useScheduleCalendar() {
       status: 'blocked',
       blockReason: data.reason,
       channel: 'manual',
+      origin: 'manual',
     }
     setAppointments((prev) => [...prev, newBlocked])
     setIsBlockModalOpen(false)
@@ -121,5 +198,13 @@ export function useScheduleCalendar() {
     closeAppointment,
     cancelAppointment,
     addBlockedTime,
+    // Criação e edição
+    isFormOpen,
+    editingAppointment,
+    slotPrefill,
+    openCreateForm,
+    openEditForm,
+    closeForm,
+    saveAppointment,
   }
 }

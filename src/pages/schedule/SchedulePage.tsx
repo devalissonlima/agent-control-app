@@ -5,6 +5,7 @@ import { ScheduleHeader } from './components/ScheduleHeader'
 import { FullCalendarView } from './components/FullCalendarView'
 import { AppointmentSheetDetails } from './components/AppointmentSheetDetails'
 import { BlockTimeDialog } from './components/BlockTimeDialog'
+import { AppointmentFormDialog } from './components/AppointmentFormDialog'
 
 export const SchedulePage: React.FC = () => {
   const {
@@ -25,6 +26,13 @@ export const SchedulePage: React.FC = () => {
     openAppointment,
     cancelAppointment,
     addBlockedTime,
+    isFormOpen,
+    editingAppointment,
+    slotPrefill,
+    openCreateForm,
+    openEditForm,
+    closeForm,
+    saveAppointment,
   } = useScheduleCalendar()
 
   return (
@@ -40,7 +48,7 @@ export const SchedulePage: React.FC = () => {
               Agenda & Gestão de Horários
             </h1>
             <p className="text-xs text-slate-500 sm:text-sm">
-              Visualização de agendamentos automatizados pelo agente de IA e bloqueio de horários com FullCalendar
+              Visualização de agendamentos automatizados pelo agente de IA e gestão de horários no balcão
             </p>
           </div>
         </div>
@@ -55,6 +63,7 @@ export const SchedulePage: React.FC = () => {
         onNext={goToNext}
         onToday={goToToday}
         onOpenBlockModal={() => setIsBlockModalOpen(true)}
+        onOpenNewAppointment={() => openCreateForm()}
       />
 
       {/* 3. Visualização FullCalendar Interativa */}
@@ -63,6 +72,7 @@ export const SchedulePage: React.FC = () => {
         appointments={appointments}
         onSelectAppointment={openAppointment}
         onDatesSet={handleDatesSet}
+        onSlotClick={(date, startTime) => openCreateForm({ date, startTime })}
       />
 
       {/* 4. Sheet Lateral com Detalhes do Agendamento */}
@@ -71,6 +81,7 @@ export const SchedulePage: React.FC = () => {
         onClose={setIsSheetOpen}
         appointment={selectedAppointment}
         onCancelAppointment={cancelAppointment}
+        onEditAppointment={openEditForm}
       />
 
       {/* 5. Dialog para Bloqueio de Período */}
@@ -78,6 +89,15 @@ export const SchedulePage: React.FC = () => {
         isOpen={isBlockModalOpen}
         onClose={() => setIsBlockModalOpen(false)}
         onConfirm={addBlockedTime}
+      />
+
+      {/* 6. Modal de Criação / Edição de Agendamento */}
+      <AppointmentFormDialog
+        isOpen={isFormOpen}
+        onClose={closeForm}
+        initialAppointment={editingAppointment}
+        slotPrefill={slotPrefill}
+        onSave={saveAppointment}
       />
     </div>
   )

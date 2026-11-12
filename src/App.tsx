@@ -11,6 +11,7 @@ import { AgentPage } from '@/pages/agent/AgentPage'
 import { MonitoringPage } from '@/pages/monitoring/MonitoringPage'
 import { OrdersPage } from '@/pages/orders/OrdersPage'
 import { SchedulePage } from '@/pages/schedule/SchedulePage'
+import { QuotesPage } from '@/pages/quotes/QuotesPage'
 import { CustomersPage } from '@/pages/customers/CustomersPage'
 import { PlanPage } from '@/pages/plan/PlanPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
@@ -47,6 +48,7 @@ export const App: React.FC = () => {
             <Route path="acompanhamento" element={<MonitoringPage />} />
             <Route path="pedidos" element={<OrdersPage />} />
             <Route path="agenda" element={<SchedulePage />} />
+            <Route path="orcamentos" element={<QuotesPage />} />
             <Route path="clientes" element={<CustomersPage />} />
             <Route path="meu-plano" element={<PlanPage />} />
             <Route path="perfil" element={<ProfilePage />} />
